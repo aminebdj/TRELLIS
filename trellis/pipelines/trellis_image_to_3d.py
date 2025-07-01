@@ -35,6 +35,8 @@ class TrellisImageTo3DPipeline(Pipeline):
             return
         super().__init__(models)
         self.sparse_structure_sampler = sparse_structure_sampler
+        print(sparse_structure_sampler)
+        exit()
         self.slat_sampler = slat_sampler
         self.sparse_structure_sampler_params = {}
         self.slat_sampler_params = {}
