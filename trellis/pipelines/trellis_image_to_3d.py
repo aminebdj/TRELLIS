@@ -186,10 +186,10 @@ class TrellisImageTo3DPipeline(Pipeline):
         print(f'prompt : {prompt}')
         print(f"Text {cond_txt.shape}")
         print(f"Image {cond.shape}")
-        exit()
+        # exit()
         return {
-            'cond': cond,
-            'neg_cond': neg_cond,
+            'cond': cond_txt,
+            'neg_cond': neg_cond_txt,
         }
 
     def sample_sparse_structure(
