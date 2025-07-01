@@ -142,7 +142,6 @@ def image_to_3d(
     if not is_multiimage:
         outputs = pipeline.run(
             image,
-            text_prompt,
             seed=seed,
             formats=["gaussian", "mesh"],
             preprocess_image=False,
