@@ -110,6 +110,7 @@ def get_seed(randomize_seed: bool, seed: int) -> int:
 
 def image_to_3d(
     image: Image.Image,
+    text_prompt: str,
     multiimages: List[Tuple[Image.Image, str]],
     is_multiimage: bool,
     seed: int,
@@ -142,6 +143,7 @@ def image_to_3d(
     if not is_multiimage:
         outputs = pipeline.run(
             image,
+            text_prompt,
             seed=seed,
             formats=["gaussian", "mesh"],
             preprocess_image=False,
@@ -262,6 +264,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
     
     with gr.Row():
         with gr.Column():
+            text_prompt = gr.Textbox(label="Text Prompt", lines=5)
             with gr.Tabs() as input_tabs:
                 with gr.Tab(label="Single Image", id=0) as single_image_input_tab:
                     image_prompt = gr.Image(label="Image Prompt", format="png", image_mode="RGBA", type="pil", height=300)
@@ -363,7 +366,7 @@ with gr.Blocks(delete_cache=(600, 600)) as demo:
         outputs=[seed],
     ).then(
         image_to_3d,
-        inputs=[image_prompt, multiimage_prompt, is_multiimage, seed, ss_guidance_strength, ss_sampling_steps, slat_guidance_strength, slat_sampling_steps, multiimage_algo],
+        inputs=[image_prompt, text_prompt, multiimage_prompt, is_multiimage, seed, ss_guidance_strength, ss_sampling_steps, slat_guidance_strength, slat_sampling_steps, multiimage_algo],
         outputs=[output_buf, video_output],
     ).then(
         lambda: tuple([gr.Button(interactive=True), gr.Button(interactive=True)]),

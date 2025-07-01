@@ -10,7 +10,7 @@ import rembg
 from .base import Pipeline
 from . import samplers
 from ..modules import sparse as sp
-
+from transformers import CLIPTextModel, AutoTokenizer
 
 class TrellisImageTo3DPipeline(Pipeline):
     """
@@ -78,6 +78,20 @@ class TrellisImageTo3DPipeline(Pipeline):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         self.image_cond_model_transform = transform
+    def _init_text_cond_model(self, name: str):
+        """
+        Initialize the text conditioning model.
+        """
+        # load model
+        model = CLIPTextModel.from_pretrained(name)
+        tokenizer = AutoTokenizer.from_pretrained(name)
+        model.eval()
+        model = model.cuda()
+        self.text_cond_model = {
+            'model': model,
+            'tokenizer': tokenizer,
+        }
+        self.text_cond_model['null_cond'] = self.encode_text([''])
 
     def preprocess_image(self, input: Image.Image) -> Image.Image:
         """
@@ -141,8 +155,18 @@ class TrellisImageTo3DPipeline(Pipeline):
         features = self.models['image_cond_model'](image, is_training=True)['x_prenorm']
         patchtokens = F.layer_norm(features, features.shape[-1:])
         return patchtokens
+    @torch.no_grad()
+    def encode_text(self, text: List[str]) -> torch.Tensor:
+        """
+        Encode the text.
+        """
+        assert isinstance(text, list) and all(isinstance(t, str) for t in text), "text must be a list of strings"
+        encoding = self.text_cond_model['tokenizer'](text, max_length=77, padding='max_length', truncation=True, return_tensors='pt')
+        tokens = encoding['input_ids'].cuda()
+        embeddings = self.text_cond_model['model'](input_ids=tokens).last_hidden_state
         
-    def get_cond(self, image: Union[torch.Tensor, list[Image.Image]]) -> dict:
+        return embeddings
+    def get_cond(self, image: Union[torch.Tensor, list[Image.Image]], prompt: List[str]) -> dict:
         """
         Get the conditioning information for the model.
 
@@ -152,8 +176,16 @@ class TrellisImageTo3DPipeline(Pipeline):
         Returns:
             dict: The conditioning information
         """
+        
+        cond_txt = self.encode_text(prompt)
+        neg_cond_txt = self.text_cond_model['null_cond']
+        
         cond = self.encode_image(image)
         neg_cond = torch.zeros_like(cond)
+        print(f'prompt : {prompt}')
+        print(f"Text {cond_txt.shape}")
+        print(f"Image {cond.shape}")
+        exit()
         return {
             'cond': cond,
             'neg_cond': neg_cond,
@@ -255,6 +287,7 @@ class TrellisImageTo3DPipeline(Pipeline):
     def run(
         self,
         image: Image.Image,
+        prompt: str,
         num_samples: int = 1,
         seed: int = 42,
         sparse_structure_sampler_params: dict = {},
@@ -276,7 +309,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         if preprocess_image:
             image = self.preprocess_image(image)
-        cond = self.get_cond([image])
+        cond = self.get_cond([image], [prompt])
         torch.manual_seed(seed)
         coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
         slat = self.sample_slat(cond, coords, slat_sampler_params)
