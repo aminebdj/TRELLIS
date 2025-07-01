@@ -64,6 +64,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         new_pipeline.slat_normalization = args['slat_normalization']
 
         new_pipeline._init_image_cond_model(args['image_cond_model'])
+        new_pipeline._init_text_cond_model("openai/clip-vit-large-patch14")
 
         return new_pipeline
     
