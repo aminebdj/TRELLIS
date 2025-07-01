@@ -169,7 +169,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         embeddings = self.text_cond_model['model'](input_ids=tokens).last_hidden_state
         
         return embeddings
-    def get_cond(self, image: Union[torch.Tensor, list[Image.Image]], prompt: List[str]) -> dict:
+    def get_cond(self, image: Union[torch.Tensor, list[Image.Image]]) -> dict:
         """
         Get the conditioning information for the model.
 
@@ -180,18 +180,15 @@ class TrellisImageTo3DPipeline(Pipeline):
             dict: The conditioning information
         """
         
-        cond_txt = self.encode_text(prompt)
-        neg_cond_txt = self.text_cond_model['null_cond']
+        # cond_txt = self.encode_text(prompt)
+        # neg_cond_txt = self.text_cond_model['null_cond']
         
         cond = self.encode_image(image)
         neg_cond = torch.zeros_like(cond)
-        print(f'prompt : {prompt}')
-        print(f"Text {cond_txt.shape}")
-        print(f"Image {cond.shape}")
         # exit()
         return {
-            'cond': cond_txt,
-            'neg_cond': neg_cond_txt,
+            'cond': cond,
+            'neg_cond': neg_cond,
         }
 
     def sample_sparse_structure(
@@ -290,7 +287,6 @@ class TrellisImageTo3DPipeline(Pipeline):
     def run(
         self,
         image: Image.Image,
-        prompt: str,
         num_samples: int = 1,
         seed: int = 42,
         sparse_structure_sampler_params: dict = {},
@@ -312,7 +308,7 @@ class TrellisImageTo3DPipeline(Pipeline):
         """
         if preprocess_image:
             image = self.preprocess_image(image)
-        cond = self.get_cond([image], [prompt])
+        cond = self.get_cond([image])
         torch.manual_seed(seed)
         coords = self.sample_sparse_structure(cond, num_samples, sparse_structure_sampler_params)
         slat = self.sample_slat(cond, coords, slat_sampler_params)
